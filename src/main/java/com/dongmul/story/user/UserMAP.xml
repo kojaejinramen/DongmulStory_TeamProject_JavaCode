@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.dongmul.story.user.UserMAP">  <!-- Mapper의 경로를 준다. Mapper와 XML이 연동 되어야 함 -->
+
+	<insert id="addUser" parameterType="com.dongmul.story.user.User"
+		useGeneratedKeys="true" keyProperty="userNum">
+		INSERT INTO user (userName,
+		userPhone, userAddress1, userAddress2,
+		userAddress3, userEmail,
+		userEmailDomain, userId, userPwd)
+		VALUES (#{userName}, #{userPhone},
+		#{userAddress1}, #{userAddress2},
+		#{userAddress3}, #{userEmail},
+		#{userEmailDomain}, #{userId},
+		#{userPwd})
+	</insert>
+
+
+	<select id="isInclude"
+		parameterType="com.dongmul.story.user.User"
+		resultType="com.dongmul.story.user.User">
+		SELECT * FROM user WHERE userId = #{userId} AND userPwd =
+		#{userPwd}
+	</select>
+
+	<select id="checkId" resultType="com.dongmul.story.user.User">
+		SELECT * FROM user WHERE userId
+		= #{userId}
+	</select>
+
+	<select id="checkEmail" resultType="com.dongmul.story.user.User">
+		SELECT * FROM user WHERE
+		userEmail = #{userEmail} And userEmailDomain =
+		#{userEmailDomain}
+	</select>
+
+	<select id="findId" parameterType="com.dongmul.story.user.User"
+		resultType="com.dongmul.story.user.User">
+		SELECT * FROM user WHERE userName = #{userName} AND
+		userEmail =
+		#{userEmail} And userEmailDomain = #{userEmailDomain}
+	</select>
+
+	<select id="findPwd" parameterType="com.dongmul.story.user.User"
+		resultType="com.dongmul.story.user.User">
+		SELECT * FROM user WHERE userName = #{userName} AND
+		userEmail =
+		#{userEmail} And userEmailDomain = #{userEmailDomain} AND
+		userId =
+		#{userId}
+	</select>
+
+	<select id="findUser" parameterType="String"
+		resultType="com.dongmul.story.user.User">
+		SELECT * FROM user WHERE userId = #{userId}
+	</select>
+
+	<select id="userList" resultType="com.dongmul.story.user.User">
+		SELECT * FROM user
+	</select>
+
+
+	<update id="updateUser"
+		parameterType="com.dongmul.story.user.User">
+		UPDATE user
+		SET
+		userName = #{userName},
+		userPhone = #{userPhone},
+		userAddress1 = #{userAddress1},
+		userAddress2 = #{userAddress2},
+		userAddress3 = #{userAddress3},
+		userEmail = #{userEmail},
+		userPwd = #{userPwd}
+		WHERE
+		userId = #{userId}
+	</update>
+
+
+	<delete id="deleteUser"
+		parameterType="com.dongmul.story.user.User">
+		DELETE FROM user WHERE userId = #{userId}
+	</delete>
+
+
+</mapper>

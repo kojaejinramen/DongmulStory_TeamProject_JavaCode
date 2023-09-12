@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dongmul.story.shop.ShopMAP">
+
+	<insert id="add" parameterType="com.dongmul.story.shop.Item"
+		useGeneratedKeys="true" keyProperty="num">
+		INSERT INTO item
+		(itemNum,
+		itemName, itemAnimalNum, itemTypeNum, itemPrice, itemContents,
+		itemOrder)
+		VALUES
+		(null, #{name}, #{animalNum}, #{typeNum}, #{price},
+		#{contents}, 0)
+	</insert>
+
+	<insert id="addFiles" parameterType="java.util.List">
+		INSERT INTO ifile
+		(ifileNum, ifileItemNum, ifileName, ifileType,
+		ifileFakeName)
+		VALUES
+		<foreach collection="list" item="ifile" separator=", ">
+			(null,
+			#{ifile.itemNum}, #{ifile.name}, #{ifile.type}, #{ifile.fakeName})
+		</foreach>
+	</insert>
+
+	<select id="getAnimalList" parameterType="map" resultType="map">
+		SELECT i.*,
+		group_concat(f.ifileNum) as ifileNums,
+		group_concat(f.ifileName) as ifileNames,
+		group_concat(f.ifileType) as
+		ifileTypes,
+		group_concat(f.ifileFakeName) as ifileFakeNames,
+		SUBSTRING_INDEX(group_concat(f.ifileFakeName), ',', 1) AS ShowFile
+		from item i left outer join ifile f
+		on i.itemNum = f.ifileItemNum
+		WHERE
+		i.itemAnimalNum = #{animalNum}
+		AND i.itemTypeNum = #{typeNum}
+		group by
+		i.itemNum
+		order by i.itemNum desc
+	</select>
+	
+	<select id="detail" parameterType="Integer" resultType="map">
+		SELECT
+		i.*,
+		GROUP_CONCAT(f.ifileNum) AS ifileNums,
+		GROUP_CONCAT(f.ifileName) AS
+		ifileNames,
+		GROUP_CONCAT(f.ifileType) AS ifileTypes,
+		GROUP_CONCAT(f.ifileFakeName) AS ifileFakeNames,
+		(SELECT
+		f2.ifileFakeName
+		FROM ifile f2
+		WHERE f2.ifileItemNum = i.itemNum
+		ORDER BY
+		f2.ifileNum
+		LIMIT 1) AS ShowFile
+		FROM item i
+		LEFT OUTER JOIN ifile f ON
+		i.itemNum = f.ifileItemNum
+		WHERE i.itemNum = #{itemNum}
+		GROUP BY
+		i.itemNum
+		ORDER BY i.itemNum DESC
+	</select>
+
+	<select id="makeReviewsList" parameterType="Integer"
+		resultType="map">
+		SELECT r.*,
+		(SELECT rf.rfileFakeName
+		FROM rfile rf
+		WHERE rf.rfileReviewNum = r.reviewNum
+		LIMIT 1) AS rfileFakeName
+		FROM review r
+		WHERE r.reviewItemNum = #{itemNum}
+		order by r.reviewDate DESC
+		LIMIT 3
+	</select>
+
+	<select id="find" parameterType="map" resultType="map">
+		SELECT i.*,
+		group_concat(f.ifileNum) as ifileNums,
+		group_concat(f.ifileName) as ifileNames,
+		group_concat(f.ifileType) as ifileTypes,
+		group_concat(f.ifileFakeName) as ifileFakeNames,
+		SUBSTRING_INDEX(group_concat(f.ifileFakeName), ',', 1) AS ShowFile
+		from item i
+		left outer join ifile f on i.itemNum =f.ifileItemNum
+		WHERE i.itemAnimalNum = #{animalNum}
+		AND i.itemTypeNum = #{typeNum}
+		<if test="category eq 'name'">
+			AND i.itemName LIKE CONCAT ('%',#{keyword},'%')
+		</if>
+		<if test="category eq 'contents'">
+			AND i.itemContents LIKE CONCAT ('%',#{keyword},'%')
+		</if>
+		<if test="category eq 'price'">
+			AND i.itemPrice = #{keyword}
+		</if>
+		group by i.itemNum order by i.itemNum desc
+	</select>
+
+	<update id="update" parameterType="com.dongmul.story.shop.Item">
+		UPDATE item
+		SET itemName =
+		#{name}, itemPrice = #{price}, itemContents = #{contents}
+		WHERE itemNum
+		= #{num};
+	</update>
+
+	<delete id="deleteAll" parameterType="Integer">
+		DELETE FROM item WHERE
+		itemNum = #{itemNum}
+	</delete>
+
+	<delete id="deleteImg" parameterType="String">
+		DELETE FROM ifile WHERE
+		ifileFakeName = #{ifileFakeName}
+	</delete>
+
+</mapper>

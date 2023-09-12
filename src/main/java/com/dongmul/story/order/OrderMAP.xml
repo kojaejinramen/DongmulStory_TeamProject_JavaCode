@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dongmul.story.order.OrderMAP">
+
+	<!-- 추가 -->
+	<!-- 넘어온 num들의 배열, itemnum을 통해 3개 테이블 합쳐서 값 가져오기 -->
+	<select id="getLastList" parameterType="java.util.List"
+		resultType="java.util.Map">
+		SELECT c.cartNum, c.cartQuantity,
+		u.userName, u.userId, u.userPhone, u.userEmail, u.userEmailDomain,
+		u.userAddress1, u.userAddress2, u.userAddress3, i.itemNum, i.itemName,
+		i.itemAnimalNum, i.itemTypeNum, i.itemPrice
+		FROM cart c
+		JOIN user u ON c.cartUserId = u.userId
+		JOIN item i ON c.cartItemNum = i.itemNum
+		WHERE c.cartNum IN
+		<foreach collection="list" item="cartNum" separator=","
+			open="(" close=")">
+			#{cartNum}
+		</foreach>
+	</select>
+
+
+	<!-- 위의 내용 저장 -->
+	<!-- 결제 누르면 ordertb에 저장 -->
+	<insert id="saveOrderlist" parameterType="java.util.List">
+		INSERT INTO ordertb
+		(orderNum, orderGroup, orderUserId, orderUserName, orderPhone, orderItemNum,
+		orderItemName, orderItemPrice, orderQuantity,
+		orderNote, orderAddress1, orderAddress2, orderAddress3, orderDate, orderState)
+		VALUES
+		<foreach collection="list" item="order" separator=", ">
+			(NULL, #{order.orderGroup}, #{order.orderUserId}, #{order.orderUserName},
+			#{order.orderPhone}, #{order.orderItemNum},
+			#{order.orderItemName}, #{order.orderItemPrice}, #{order.orderQuantity}, #{order.orderNote},
+			#{order.orderAddress1}, #{order.orderAddress2},
+			#{order.orderAddress3}, CURDATE(), #{order.orderState})
+		</foreach>
+	</insert>
+
+	<!-- order up -->
+	<update id="addQuatityAtItem" parameterType="java.util.List">
+		UPDATE item i
+		SET i.itemOrder =
+		CASE
+		<foreach collection="list" item="order" separator=" ">
+			WHEN i.itemNum = #{order.orderItemNum} THEN #{order.orderQuantity}
+		</foreach>
+		ELSE i.itemOrder
+		END
+		WHERE i.itemNum
+		IN
+		<foreach collection="list" item="order" separator=", "
+			open="(" close=")">
+			#{order.orderItemNum}
+		</foreach>
+	</update>
+
+
+	<!-- delete cart -->
+	<delete id="deleteCart" parameterType="java.util.List">
+		DELETE FROM cart WHERE cartNum in
+		<foreach collection="list" item="cartNum" open="(" close=")"
+			separator=", ">
+			#{cartNum}
+		</foreach>
+	</delete>
+
+
+	<!-- user랑 oreder tb에서 payList -->
+	<select id="payList" parameterType="java.util.Map"
+		resultType="java.util.Map">
+		SELECT o.*,
+		(SELECT r.reviewGrade
+		FROM review r
+		WHERE r.reviewUserId = o.orderUserId
+		AND r.reviewItemNum = o.orderItemNum
+		AND r.reviewOrderNum = o.orderNum) as 'check'
+		FROM ordertb o
+		JOIN user u ON o.orderUserId = u.userId
+		WHERE u.userId = #{userId}
+		ORDER BY o.orderNum DESC
+	</select>
+
+	<!-- user랑 oreder tb에서 payList 관리자 -->
+	<select id="payListForAdmin" resultType="java.util.Map">
+		SELECT o.*,
+		(SELECT r.reviewGrade
+		FROM review r
+		WHERE r.reviewItemNum = o.orderItemNum
+		AND r.reviewOrderNum = o.orderNum) as 'check'
+		FROM ordertb o
+		ORDER BY o.orderNum DESC
+	</select>
+
+	<!-- ordertb랑 item에서 detail -->
+	<select id="detail" resultType="java.util.Map"
+		parameterType="Integer">
+		SELECT
+		o.orderNum,
+		o.orderUserName,
+		u.userName,
+		o.orderPhone,
+		o.orderAddress1,
+		o.orderAddress2,
+		o.orderAddress3,
+		i.itemNum,
+		i.itemName,
+		i.itemPrice,
+		o.orderQuantity,
+		(i.itemPrice * o.orderQuantity) AS totalAmount,
+		o.orderNote,
+		o.orderState,
+		o.orderDate,
+		(SELECT r.reviewGrade
+		FROM review r
+		WHERE r.reviewUserId = o.orderUserId
+		AND r.reviewItemNum = o.orderItemNum
+		AND r.reviewOrderNum = o.orderNum) AS 'check'
+		FROM ordertb o
+		JOIN item i ON i.itemNum = o.orderItemNum
+		JOIN user u ON u.userId = o.orderUserId
+		WHERE o.orderNum = #{orderNum}
+	</select>
+
+	<!-- orderState 수정 -->
+	<update id="update"
+		parameterType="com.dongmul.story.order.Order">
+		UPDATE ordertb SET orderState = #{orderState} WHERE orderNum =
+		#{orderNum}
+	</update>
+
+
+	<!-- ordaertb에서 orderNum으로 삭제 -->
+	<delete id="delete"
+		parameterType="com.dongmul.story.order.Order">
+		DELETE FROM ordertb WHERE orderNum = #{orderNum}
+	</delete>
+
+	<!-- 교환,반품,환불접수 -->
+	<select id="findByOrderNum" parameterType="Integer"
+		resultType="com.dongmul.story.order.Order">
+		SELECT * FROM ordertb WHERE orderNum = #{orderNum}
+	</select>
+
+
+	<!-- user, item, date, animal별 총 가격 List -->
+	<select id="getUserOrder" resultType="java.util.Map">
+		SELECT u.userNum, u.userId, u.userPhone, SUM(o.orderItemPrice *
+		o.orderQuantity) as sumPrice
+		FROM user u
+		LEFT OUTER JOIN ordertb o
+		ON u.userId = o.orderUserId
+		LEFT OUTER JOIN item i
+		ON o.orderItemNum = i.itemNum
+		WHERE o.orderState IN ('구매확정', '결제확인중', '배송준비중', '배송중', '배송완료')
+		GROUP BY u.userNum, u.userId, u.userPhone
+		ORDER BY sumPrice DESC
+	</select>
+
+	<select id="getItemOrder" resultType="java.util.Map">
+		SELECT i.itemNum, i.itemName, SUM(o.orderQuantity) as sumQty,
+		SUM(o.orderItemPrice * o.orderQuantity) AS sumPrice
+		FROM item i
+		LEFT OUTER JOIN ordertb o
+		ON o.orderItemNum = i.itemNum
+		WHERE o.orderState IN ('구매확정', '결제확인중', '배송준비중', '배송중', '배송완료')
+		GROUP BY i.itemNum, i.itemName
+		ORDER BY sumPrice DESC
+	</select>
+
+	<select id="getDateOrder" resultType="java.util.Map">
+		SELECT o.orderDate, SUM(o.orderQuantity) as sumQty,
+		SUM(o.orderItemPrice * o.orderQuantity) as sumPrice
+		FROM ordertb o
+		<where>
+			<if test="startDate != null and endDate != null">
+				o.orderDate BETWEEN #{startDate} AND #{endDate}
+			</if>
+		</where>
+		WHERE o.orderState IN ('구매확정', '결제확인중', '배송준비중', '배송중', '배송완료')
+		GROUP BY o.orderDate
+		ORDER BY o.orderDate ASC
+	</select>
+
+	<select id="getAnimalOrder" resultType="java.util.Map">
+		SELECT a.animalName, t.typeName, SUM(o.orderQuantity) as sumQty,
+		SUM(o.orderItemPrice * o.orderQuantity) as sumPrice
+		FROM animal a
+		CROSS JOIN type t
+		LEFT JOIN item i ON a.animalNum = i.itemAnimalNum AND t.typeNum =
+		i.itemTypeNum
+		LEFT JOIN ordertb o ON i.itemNum = o.orderItemNum
+		WHERE o.orderState IN ('구매확정', '결제확인중', '배송준비중', '배송중', '배송완료')
+		GROUP BY a.animalName, t.typeName, a.animalNum, t.typeNum
+		ORDER BY a.animalNum ASC, t.typeNum ASC
+	</select>
+
+	<!-- 관리자 구매내역 관리 -->
+	<select id="adminPayList" parameterType="java.util.Map"
+		resultType="java.util.Map">
+		SELECT o.*,
+		(SELECT SUM(o.orderItemPrice * o.orderQuantity)
+		FROM ordertb o
+		WHERE o.orderUserId = u.userId) AS sumPrice
+		FROM ordertb o
+		JOIN user u ON o.orderUserId = u.userId
+		WHERE u.userId = #{userId}
+		order by o.orderNum desc
+	</select>
+</mapper>

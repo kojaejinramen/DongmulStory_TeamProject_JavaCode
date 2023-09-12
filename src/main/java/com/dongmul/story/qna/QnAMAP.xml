@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dongmul.story.qna.QnAMAP">
+
+	<insert id="add" parameterType="com.dongmul.story.qna.QnA">
+		INSERT INTO qna
+			(qnaCategory, qnaTitle, qnaContents, qnaUserId, qnaHit, qnaDate, qnaLock)
+		VALUES
+			(#{qnaCategory}, #{qnaTitle}, #{qnaContents}, #{qnaUserId}, 0, CURDATE(), #{qnaLock})
+	</insert>
+
+	<select id="getNlist" resultType="java.util.Map">
+		SELECT * FROM (
+			SELECT *, 0 AS sort_order FROM qna WHERE qnaCategory = '공지'
+			UNION ALL
+			SELECT *, 1 AS sort_order FROM qna WHERE qnaCategory != '공지'
+		) AS temp
+		ORDER BY sort_order, qnaDate DESC, qnaNum DESC
+	</select>
+
+	<select id="getOlist" resultType="java.util.Map">
+		SELECT * FROM (
+			SELECT *, 0 AS sort_order FROM qna WHERE qnaCategory = '공지'
+			UNION ALL
+			SELECT *, 1 AS sort_order FROM qna WHERE qnaCategory != '공지'
+		) AS temp
+		ORDER BY sort_order, qnaDate ASC, qnaNum ASC
+	</select>
+
+	<select id="getHlist" resultType="java.util.Map">
+		SELECT * FROM (
+			SELECT *, 0 AS sort_order FROM qna WHERE qnaCategory = '공지'
+			UNION ALL
+			SELECT *, 1 AS sort_order FROM qna WHERE qnaCategory != '공지'
+		) AS temp
+		ORDER BY sort_order, qnaHit DESC, qnaNum DESC
+	</select>
+	
+	<select id="getNSelfList" parameterType="String" resultType="java.util.Map">
+		SELECT * FROM (
+			SELECT *, 0 AS sort_order FROM qna WHERE qnaCategory = '공지'
+			UNION ALL
+			SELECT *, 1 AS sort_order FROM qna WHERE qnaCategory != '공지'
+		) AS temp
+		WHERE qnaUserId = #{userId}
+		ORDER BY sort_order, qnaDate DESC, qnaNum DESC
+	</select>
+
+	<select id="getOSelfList" parameterType="String" resultType="java.util.Map">
+		SELECT * FROM (
+			SELECT *, 0 AS sort_order FROM qna WHERE qnaCategory = '공지'
+			UNION ALL
+			SELECT *, 1 AS sort_order FROM qna WHERE qnaCategory != '공지'
+		) AS temp
+		WHERE qnaUserId = #{userId}
+		ORDER BY sort_order, qnaDate ASC, qnaNum ASC
+	</select>
+
+	<select id="getHSelfList" parameterType="String" resultType="java.util.Map">
+		SELECT * FROM (
+			SELECT *, 0 AS sort_order FROM qna WHERE qnaCategory = '공지'
+			UNION ALL
+			SELECT *, 1 AS sort_order FROM qna WHERE qnaCategory != '공지'
+		) AS temp
+		WHERE qnaUserId = #{userId}
+		ORDER BY sort_order, qnaHit DESC, qnaNum DESC
+	</select>
+
+	<select id="detail" parameterType="com.dongmul.story.qna.QnA" resultType="com.dongmul.story.qna.QnA">
+		SELECT * FROM qna WHERE qnaNum = #{qnaNum}
+	</select>
+
+	<update id="hitUp" parameterType="com.dongmul.story.qna.QnA">
+		UPDATE qna
+		SET qnaHit = qnaHit+1
+		WHERE qnaNum = #{qnaNum}
+	</update>
+
+	<update id="update" parameterType="com.dongmul.story.qna.QnA">
+		UPDATE qna
+		SET
+			qnaCategory = #{qnaCategory},
+			qnaTitle = #{qnaTitle},
+			qnaContents = #{qnaContents},
+			qnaAnswer = null,
+			qnaHit = 1,
+			qnaDate = CURDATE(),
+			qnaLock = #{qnaLock}
+		WHERE qnaNum = #{qnaNum}
+	</update>
+	
+	<update id="answer" parameterType="com.dongmul.story.user.User">
+		UPDATE qna 
+		SET 
+			qnaAnswer = #{qnaAnswer} 
+		WHERE qnaNum = #{qnaNum} 
+	</update>
+
+	<delete id="delete" parameterType="com.dongmul.story.qna.QnA">
+		DELETE FROM qna WHERE qnaNum = #{qnaNum}
+	</delete>
+
+</mapper>
