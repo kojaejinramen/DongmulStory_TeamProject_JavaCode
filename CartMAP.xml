@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dongmul.story.cart.CartMAP">
+	<!-- 카트에 아이템 추가 -->
+	<insert id="addCart" parameterType="com.dongmul.story.cart.Cart"
+		useGeneratedKeys="true" keyProperty="cartNum">
+		INSERT INTO cart VALUES(NULL,
+		#{cartUserId}, #{cartItemNum}, #{cartQuantity})
+	</insert>
+
+	<!-- 카트 리스트 -->
+	<select id="allList" parameterType="String"
+		resultType="java.util.Map">
+		SELECT c.cartNum, c.cartUserId,
+		c.cartItemNum, c.cartQuantity, i.itemName , i.itemPrice,
+		i.itemAnimalNum, i.itemNum, i.itemTypeNum FROM cart c INNER JOIN item i
+		ON c.cartItemNum = i.itemNum
+		WHERE c.cartUserId = #{userId}
+		ORDER BY c.cartNum DESC
+	</select>
+
+	<!-- 장바구니에 담겨있는 상품을 아이템 상세페이지에서 장바구니 담기버튼을 눌렀을 때 리스트 중복방지 및 수량 추가를 위한 SQL -->
+	<select id="findByItemNum"
+		resultType="com.dongmul.story.cart.Cart">
+		SELECT * FROM cart
+		WHERE cartItemNum = #{cartItemNum} AND
+		cartUserId = #{cartUserId}
+	</select>
+
+	<!-- 카트에서 상품 수량 변경 -->
+	<update id="updateCart"
+		parameterType="com.dongmul.story.cart.Cart">
+		UPDATE cart SET cartQuantity=#{cartQuantity} WHERE
+		cartNum=#{cartNum}
+		AND cartUserId = #{cartUserId}
+	</update>
+
+	<!-- 카트에서 상품 삭제 -->
+	<delete id="deleteCart" parameterType="java.util.List">
+		DELETE FROM cart
+		WHERE cartNum IN
+		<foreach item="cartNum" collection="list" open="("
+			separator="," close=")">
+			#{cartNum}
+		</foreach>
+	</delete>
+
+</mapper>
